@@ -10,14 +10,14 @@ import org.apache.log4j.Level
 object PSO_RDD {
   
   var dimension = 2
-  var no_of_particles = 2
+  var no_of_particles = 50
   var gbest_position=Array.fill(dimension)(math.random)
     
   def main(args:Array[String]): Unit ={
     
     Logger.getLogger("org").setLevel(Level.OFF)
     Logger.getLogger("akka").setLevel(Level.OFF)
-    val conf=new SparkConf().setAppName("PSO_RDD").setMaster("local[*]")
+    val conf=new SparkConf().setAppName("PSO_RDD").setMaster("local[1]")
     val sc = new SparkContext(conf)
     
     var swarm = ArrayBuffer[Particle]()

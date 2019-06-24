@@ -2,8 +2,8 @@ import scala.collection.Seq
 
 class Particle(dimension:Int) extends Serializable  {
   
-  val start = -1
-  val end = 2
+  val start = -8
+  val end = 16
   
   var p_position = (Seq.fill(dimension)(math.random*end+start)).toArray
   var p_velocity = (Seq.fill(dimension)(0.0)).toArray
