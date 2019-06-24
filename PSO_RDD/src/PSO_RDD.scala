@@ -8,7 +8,7 @@ import org.apache.log4j.Logger
 import org.apache.log4j.Level
 
 object PSO_RDD {
-  
+  //hallo
   var dimension = 2
   var no_of_particles = 50
   var gbest_position=Array.fill(dimension)(math.random)
