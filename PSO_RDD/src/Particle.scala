@@ -5,9 +5,9 @@ class Particle(dimension:Int) extends Serializable  {
   val start = -8
   val end = 16
   
-  var p_position = (Seq.fill(dimension)(math.random*end+start)).toArray
-  var p_velocity = (Seq.fill(dimension)(0.0)).toArray
-  var p_best = p_position
+  var p_position = (Seq.fill(dimension)(math.random)).toArray
+  var p_velocity = (Seq.fill(dimension)(math.random)).toArray
+  var p_best = (Seq.fill(dimension)(math.random)).toArray
   
   def print_position = for(i <- 0 to dimension-1){
       print(p_position(i)," ")
