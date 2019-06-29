@@ -9,8 +9,8 @@ import org.apache.log4j.Level
 
 object PSO_RDD {
   
-  var dimension = 2
-  var no_of_particles =2
+  var dimension = 4
+  var no_of_particles =5
   var no_of_iteration = 10
   var gbest_position=Array.fill(dimension)(math.random)
     
@@ -18,18 +18,19 @@ object PSO_RDD {
     
     Logger.getLogger("org").setLevel(Level.OFF)
     Logger.getLogger("akka").setLevel(Level.OFF)
-    val conf=new SparkConf().setAppName("PSO_RDD").setMaster("local[*]")
+    val conf=new SparkConf().setAppName("PSO_RDD").setMaster("spark://abhi8569:7077").set("spark.eventLog.enabled","true")
+              .set("spark.eventLog.dir","file:///home/abishek/Downloads/spark-2.4.3-bin-hadoop2.7/history/")
+              .set("spark.history.fs.logDirectory","file:///home/abishek/Downloads/spark-2.4.3-bin-hadoop2.7/history/")
     val sc = new SparkContext(conf)
     
     var swarm = ArrayBuffer[Particle]()
     for(i <- 0 to no_of_particles-1){
       swarm += new Particle(dimension) with Serializable
     }
-    var swarm_rdd = sc.parallelize(swarm)
-
-    swarm_rdd.foreach(f => global_best_position(f.p_position))
-    swarm_rdd.foreach(f => init_pbest(f))
-    swarm_rdd.count()
+    var newSwarm = swarm.map(x => init_pbest(x))
+    newSwarm.map(f => global_best_position(f.p_position))
+    var swarm_rdd = sc.parallelize(newSwarm)
+    
     var temp_rdd: RDD[Particle]= sc.emptyRDD[Particle]
     temp_rdd=swarm_rdd
     var updated_velocity_swarm: RDD[Particle]= sc.emptyRDD[Particle]
@@ -38,7 +39,7 @@ object PSO_RDD {
       updated_velocity_swarm = temp_rdd.map{x => update_particle(x)}
       updated_velocity_swarm.count()  //dummy action to trigger map
       temp_rdd = updated_velocity_swarm
-      println("Best value after each iteration  : ",obj_func(gbest_position))
+      //println(iteration+" Best value after each iteration  : ",obj_func(gbest_position))
     }
     
     def update_particle(p:Particle):Particle={
@@ -58,14 +59,17 @@ object PSO_RDD {
       
       if(obj_func(p.p_best) < obj_func(gbest_position)){
         gbest_position=p.p_position
-        println("Best value after each particle update : ",obj_func(gbest_position))
       }
+      println("Best value after each update : ",obj_func(gbest_position))
       return p
     }
+    
+    println(" Best value after each iteration  : ",obj_func(gbest_position))
+    
     sc.stop()
   }
   
-  val obj_func = (x:Array[Double] ) => 5 + (1/(math.pow(x(0),2) + math.pow(x(1),2)))
+  val obj_func = (x:Array[Double] ) => (1/(math.pow(x(0),2) + math.pow(x(1),2))+math.pow(x(2),-2) + math.pow(x(3),2))
   
   def global_best_position(pos:Array[Double])={
     if(obj_func(pos) < obj_func(gbest_position)){
@@ -73,7 +77,8 @@ object PSO_RDD {
     }
   }  
   
-  def init_pbest(p:Particle)={
+  def init_pbest(p:Particle):Particle={
     p.p_best = p.p_position
+    return p
   }  
 }
