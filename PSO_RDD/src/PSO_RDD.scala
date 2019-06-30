@@ -9,9 +9,9 @@ import org.apache.log4j.Level
 
 object PSO_RDD {
   
-  var dimension = 4
-  var no_of_particles =5
-  var no_of_iteration = 10
+  var dimension = 2
+  var no_of_particles =10
+  var no_of_iteration = 3
   var gbest_position=Array.fill(dimension)(math.random)
     
   def main(args:Array[String]): Unit ={
@@ -25,24 +25,24 @@ object PSO_RDD {
     
     var swarm = ArrayBuffer[Particle]()
     for(i <- 0 to no_of_particles-1){
-      swarm += new Particle(dimension) with Serializable
+      swarm += new Particle(dimension,i) with Serializable
     }
     var newSwarm = swarm.map(x => init_pbest(x))
-    newSwarm.map(f => global_best_position(f.p_position))
+    newSwarm.map(f => global_best_position(f.p_best))
     var swarm_rdd = sc.parallelize(newSwarm)
     
     var temp_rdd: RDD[Particle]= sc.emptyRDD[Particle]
     temp_rdd=swarm_rdd
     var updated_velocity_swarm: RDD[Particle]= sc.emptyRDD[Particle]
     
-    for(iteration <- 0 to no_of_iteration){
-      updated_velocity_swarm = temp_rdd.map{x => update_particle(x)}
+    for(iteration <- 0 to no_of_iteration-1){
+      updated_velocity_swarm = temp_rdd.map(x => update_particle(x,iteration))
       updated_velocity_swarm.count()  //dummy action to trigger map
       temp_rdd = updated_velocity_swarm
       //println(iteration+" Best value after each iteration  : ",obj_func(gbest_position))
     }
     
-    def update_particle(p:Particle):Particle={
+    def update_particle(p:Particle,iteration:Int):Particle={
       
       for(i <- 0 to dimension-1){
         var toward_pbest= math.random*(p.p_best(i)-p.p_position(i))
@@ -60,16 +60,16 @@ object PSO_RDD {
       if(obj_func(p.p_best) < obj_func(gbest_position)){
         gbest_position=p.p_position
       }
-      println("Best value after each update : ",obj_func(gbest_position))
+      println(iteration+" => Best value after each iteration of particle ["+p.p_id+"] is : ",obj_func(gbest_position))
       return p
     }
     
-    println(" Best value after each iteration  : ",obj_func(gbest_position))
+    //println(" Best value after each iteration  : ",obj_func(gbest_position))
     
     sc.stop()
   }
   
-  val obj_func = (x:Array[Double] ) => (1/(math.pow(x(0),2) + math.pow(x(1),2))+math.pow(x(2),-2) + math.pow(x(3),2))
+  val obj_func = (x:Array[Double] ) => 5 + (1/(math.pow(x(0),2) + math.pow(x(1),2)))
   
   def global_best_position(pos:Array[Double])={
     if(obj_func(pos) < obj_func(gbest_position)){
