@@ -10,8 +10,8 @@ import org.apache.log4j.Level
 object PSO_RDD {
   
   var dimension = 2
-  var no_of_particles =10
-  var no_of_iteration = 3
+  var no_of_particles =100
+  var no_of_iteration = 100
   var gbest_position=Array.fill(dimension)(math.random)
     
   def main(args:Array[String]): Unit ={
@@ -29,40 +29,40 @@ object PSO_RDD {
     }
     var newSwarm = swarm.map(x => init_pbest(x))
     newSwarm.map(f => global_best_position(f.p_best))
-    var swarm_rdd = sc.parallelize(newSwarm)
-    
+    var swarm_rdd = sc.parallelize(newSwarm,8)
+        
     var temp_rdd: RDD[Particle]= sc.emptyRDD[Particle]
-    temp_rdd=swarm_rdd
+    temp_rdd=swarm_rdd    
     var updated_velocity_swarm: RDD[Particle]= sc.emptyRDD[Particle]
     
-    for(iteration <- 0 to no_of_iteration-1){
-      updated_velocity_swarm = temp_rdd.map(x => update_particle(x,iteration))
-      updated_velocity_swarm.count()  //dummy action to trigger map
-      temp_rdd = updated_velocity_swarm
-      //println(iteration+" Best value after each iteration  : ",obj_func(gbest_position))
-    }
+    updated_velocity_swarm = swarm_rdd.map(x => update_particle(x,no_of_iteration))
+    updated_velocity_swarm.count()  //dummy action to trigger map
+    temp_rdd = updated_velocity_swarm
     
     def update_particle(p:Particle,iteration:Int):Particle={
+      for(it <- 0 to iteration-1){
       
-      for(i <- 0 to dimension-1){
-        var toward_pbest= math.random*(p.p_best(i)-p.p_position(i))
-        var toward_gbest =  2*math.random*(gbest_position(i)-p.p_position(i))
-        p.p_velocity(i) = 0.5*p.p_velocity(i) + toward_pbest + toward_gbest
+        for(i <- 0 to dimension-1){
+          var toward_pbest= math.random*(p.p_best(i)-p.p_position(i))
+          var toward_gbest =  2*math.random*(gbest_position(i)-p.p_position(i))
+          p.p_velocity(i) = 0.5*p.p_velocity(i) + toward_pbest + toward_gbest
+        }
+        for(i <- 0 to dimension-1){
+          p.p_position(i) = p.p_position(i) + p.p_velocity(i)
+        }
+        
+        if(obj_func(p.p_position) < obj_func(p.p_best)){
+          p.p_best = p.p_position
+        }
+        
+        if(obj_func(p.p_best) < obj_func(gbest_position)){
+          gbest_position=p.p_position
+        }        
       }
-      for(i <- 0 to dimension-1){
-        p.p_position(i) = p.p_position(i) + p.p_velocity(i)
-      }
-      
-      if(obj_func(p.p_position) < obj_func(p.p_best)){
-        p.p_best = p.p_position
-      }
-      
-      if(obj_func(p.p_best) < obj_func(gbest_position)){
-        gbest_position=p.p_position
-      }
-      println(iteration+" => Best value after each iteration of particle ["+p.p_id+"] is : ",obj_func(gbest_position))
+      println(iteration+" => Best value after iteration of particle ["+p.p_id+"] is : ",obj_func(gbest_position))
       return p
     }
+    
     
     //println(" Best value after each iteration  : ",obj_func(gbest_position))
     
