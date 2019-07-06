@@ -81,7 +81,7 @@ object PSO_RDD {
       updated_swarm.count()
       //swarm_rdd.foreach(p => println("Iteration Number : "+i+" || Particle Number :  "+p.p_id+" || Pbest : "+p.obj_func(p.p_best)+" || Gbest : "+p.obj_func(gbest_position)))
     }
-    
+         
     swarm_rdd.count()
    println("------------------")
       acc.value.foreach(f => println(obj_func(f)))
