@@ -20,4 +20,13 @@ class Particle(dimension:Int, id:Int) extends Serializable  {
       print(p_best(i)," ")
     }
   
+  def obj_func(x:Array[Double]):Double = {
+      var temp:Double  =0
+      for(dim <- 0 to x.length-1 )
+      {
+        temp =temp + (math.pow(x(dim),2))
+      }
+      return temp
+    }
+  
 }
