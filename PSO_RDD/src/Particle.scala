@@ -1,23 +1,9 @@
 import scala.collection.Seq
 
-class Particle(dimension:Int) extends Serializable  {
+class Particle(dimension:Int,iter:Int) extends Serializable  {
+  var p_id:Int=iter
+  var p_position = (Seq.fill(dimension)(math.random)).toArray
+  var p_velocity = (Seq.fill(dimension)(math.random)).toArray
+  var p_best = (Seq.fill(dimension)(math.random)).toArray
   
-  val start = -8
-  val end = 16
-  
-  var p_position = (Seq.fill(dimension)(math.random*end+start)).toArray
-  var p_velocity = (Seq.fill(dimension)(0.0)).toArray
-  var p_best = p_position
-  
-  def print_position = for(i <- 0 to dimension-1){
-      print(p_position(i)," ")
-    }
-  
-  def print_velocity = for(i <- 0 to dimension-1){
-      println(p_velocity(i)," ")
-    }
-  
-  def print_pbest = for(i <- 0 to dimension-1){
-      print(p_best(i)," ")
-    }
 }

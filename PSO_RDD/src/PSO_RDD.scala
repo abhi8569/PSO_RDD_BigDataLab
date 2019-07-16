@@ -10,67 +10,85 @@ import org.apache.log4j.Level
 object PSO_RDD {
   
   var dimension = 2
-  var no_of_particles = 50
+  var no_of_particles = 1000
+  var no_of_iteration_External = 20
+  var no_of_iteration_Internal = 20
   var gbest_position=Array.fill(dimension)(math.random)
     
   def main(args:Array[String]): Unit ={
     
     Logger.getLogger("org").setLevel(Level.OFF)
     Logger.getLogger("akka").setLevel(Level.OFF)
-    val conf=new SparkConf().setAppName("PSO_RDD").setMaster("local[1]")
+    val conf=new SparkConf().setAppName(dimension+"-"+no_of_particles+"-"+no_of_iteration_External+"-"+no_of_iteration_Internal).setMaster("spark://abhi8569:7077").set("spark.eventLog.enabled","true")
+              .set("spark.eventLog.dir","file:///home/abishek/Downloads/spark-2.4.3-bin-hadoop2.7/history/")
+              .set("spark.history.fs.logDirectory","file:///home/abishek/Downloads/spark-2.4.3-bin-hadoop2.7/history/")
     val sc = new SparkContext(conf)
     
     var swarm = ArrayBuffer[Particle]()
     for(i <- 0 to no_of_particles-1){
-      swarm += new Particle(dimension) with Serializable
+      swarm += new Particle(dimension,i) with Serializable
+      
     }
-    var swarm_rdd = sc.parallelize(swarm)
+    var swarm_rdd = sc.parallelize(swarm,4)
 
     swarm_rdd.foreach(f => global_best_position(f.p_position))
-    
+    swarm_rdd.foreach(f => init_pbest(f))
     var temp_rdd: RDD[Particle]= sc.emptyRDD[Particle]
     temp_rdd=swarm_rdd
     var updated_velocity_swarm: RDD[Particle]= sc.emptyRDD[Particle]
     
-    for(iteration <- 0 to 100){
+    var bCast = sc.broadcast(gbest_position)
+    
+    println("Global Best : "+ obj_func(gbest_position))
+    for(iteration <- 0 to no_of_iteration_External){
       updated_velocity_swarm = temp_rdd.map{x => update_particle(x)}
-      updated_velocity_swarm.count()  //dummy action to trigger map
+      //updated_velocity_swarm.count()  //dummy action to trigger map
       temp_rdd = updated_velocity_swarm
-      println("Value : ",obj_func(gbest_position))
+      temp_rdd.collect().foreach(f => global_best_position(f.p_best))
+      println("Global Best : "+ obj_func(gbest_position))
+      bCast.unpersist(blocking=true)
+      bCast = sc.broadcast(gbest_position)
     }
     
     def update_particle(p:Particle):Particle={
-      
-      var parti = new Particle(dimension)
-      parti = p
-      
+      gbest_position = bCast.value
+     for(iter <- 0 to no_of_iteration_Internal){
       for(i <- 0 to dimension-1){
-        var first_part= math.random*(parti.p_best(i)-parti.p_position(i))
-        var second_pat =  2*math.random*(gbest_position(i)-parti.p_position(i))
-        parti.p_velocity(i) = 0.5*parti.p_velocity(i) + first_part + second_pat
+        var toward_pbest= math.random*(p.p_best(i)-p.p_position(i))
+        var toward_gbest =  2*math.random*(gbest_position(i)-p.p_position(i))
+        p.p_velocity(i) = 0.5*p.p_velocity(i) + toward_pbest + toward_gbest
       }
       for(i <- 0 to dimension-1){
-        parti.p_position(i) += parti.p_velocity(i)
+        p.p_position(i) = p.p_position(i) + p.p_velocity(i)
       }
       
-      if(obj_func(parti.p_position) < obj_func(parti.p_best)){
-        parti.p_best = parti.p_position
+      if(obj_func(p.p_position) < obj_func(p.p_best)){
+        p.p_best = p.p_position
       }
       
-      if(obj_func(parti.p_best) < obj_func(gbest_position)){
-        gbest_position=parti.p_position
+      if(obj_func(p.p_best) < obj_func(gbest_position)){
+        gbest_position=p.p_position
       }
-      
-      return parti
+      println("Iteration Number : "+iter+" || Particle Number :  "+p.p_id+" || Pbest : "+obj_func(p.p_best)+" || Gbest : "+obj_func(gbest_position))
+      }
+      return p
     }
     sc.stop()
   }
   
-  val obj_func = (x:Array[Double] ) => 1 + (1/(math.pow(x(0),2) + math.pow(x(1),2)))
+  //val obj_func = (x:Array[Double] ) => 1 + (1/(math.pow(x(0),2) + math.pow(x(1),2)))
+  
+  val obj_func = (x:Array[Double] ) => math.pow(x(0),2) + math.pow(x(1),2)
+  
+  
   
   def global_best_position(pos:Array[Double])={
     if(obj_func(pos) < obj_func(gbest_position)){
       gbest_position=pos
     }
+  }  
+  
+  def init_pbest(p:Particle)={
+    p.p_best = p.p_position
   }  
 }
