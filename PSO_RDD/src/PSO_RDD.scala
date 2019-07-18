@@ -9,19 +9,19 @@ import org.apache.log4j.Level
 
 object PSO_RDD {
   
-  var dimension = 2
-  var no_of_particles = 1000
-  var no_of_iteration_External = 20
-  var no_of_iteration_Internal = 20
+  var dimension = 20
+  var no_of_particles = 1500
+  var no_of_iteration_External = 10
+  var no_of_iteration_Internal = 500
   var gbest_position=Array.fill(dimension)(math.random)
     
   def main(args:Array[String]): Unit ={
     
     Logger.getLogger("org").setLevel(Level.OFF)
     Logger.getLogger("akka").setLevel(Level.OFF)
-    val conf=new SparkConf().setAppName(dimension+"-"+no_of_particles+"-"+no_of_iteration_External+"-"+no_of_iteration_Internal).setMaster("spark://abhi8569:7077").set("spark.eventLog.enabled","true")
+    val conf=new SparkConf().setAppName("2W4C3G :: "+dimension+"-"+no_of_particles+"-"+no_of_iteration_External+"-"+no_of_iteration_Internal).setMaster("spark://abhi8569:7077").set("spark.eventLog.enabled","true")
               .set("spark.eventLog.dir","file:///home/abishek/Downloads/spark-2.4.3-bin-hadoop2.7/history/")
-              .set("spark.history.fs.logDirectory","file:///home/abishek/Downloads/spark-2.4.3-bin-hadoop2.7/history/")
+              //.set("spark.history.fs.logDirectory","file:///home/abishek/Downloads/spark-2.4.3-bin-hadoop2.7/history/")
     val sc = new SparkContext(conf)
     
     var swarm = ArrayBuffer[Particle]()
@@ -29,7 +29,7 @@ object PSO_RDD {
       swarm += new Particle(dimension,i) with Serializable
       
     }
-    var swarm_rdd = sc.parallelize(swarm,4)
+    var swarm_rdd = sc.parallelize(swarm,8)
 
     swarm_rdd.foreach(f => global_best_position(f.p_position))
     swarm_rdd.foreach(f => init_pbest(f))
@@ -39,13 +39,12 @@ object PSO_RDD {
     
     var bCast = sc.broadcast(gbest_position)
     
-    println("Global Best : "+ obj_func(gbest_position))
+    println(obj_func(gbest_position))
     for(iteration <- 0 to no_of_iteration_External){
       updated_velocity_swarm = temp_rdd.map{x => update_particle(x)}
-      //updated_velocity_swarm.count()  //dummy action to trigger map
       temp_rdd = updated_velocity_swarm
       temp_rdd.collect().foreach(f => global_best_position(f.p_best))
-      println("Global Best : "+ obj_func(gbest_position))
+      println(obj_func(gbest_position))
       bCast.unpersist(blocking=true)
       bCast = sc.broadcast(gbest_position)
     }
@@ -69,7 +68,7 @@ object PSO_RDD {
       if(obj_func(p.p_best) < obj_func(gbest_position)){
         gbest_position=p.p_position
       }
-      println("Iteration Number : "+iter+" || Particle Number :  "+p.p_id+" || Pbest : "+obj_func(p.p_best)+" || Gbest : "+obj_func(gbest_position))
+      //println("Iteration Number : "+iter+" || Particle Number :  "+p.p_id+" || Pbest : "+obj_func(p.p_best)+" || Gbest : "+obj_func(gbest_position))
       }
       return p
     }
@@ -78,8 +77,16 @@ object PSO_RDD {
   
   //val obj_func = (x:Array[Double] ) => 1 + (1/(math.pow(x(0),2) + math.pow(x(1),2)))
   
-  val obj_func = (x:Array[Double] ) => math.pow(x(0),2) + math.pow(x(1),2)
+  //val obj_func = (x:Array[Double] ) => math.pow(x(0),2) + math.pow(x(1),2)
   
+  def obj_func(x:Array[Double]):Double = {
+      var temp:Double  =0
+      for(dim <- 0 to x.length-1 )
+      {
+        temp =temp + (math.pow(x(dim),2))
+      }
+      return temp
+    }
   
   
   def global_best_position(pos:Array[Double])={
