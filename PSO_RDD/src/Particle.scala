@@ -17,7 +17,7 @@ class Particle(dimension:Int,iter:Int) extends Serializable  {
     pbest_fitness=obj_func(p_best)
   }
   
-  def obj_func(x:Array[Double]):Double = {
+  def obj_func(x:Array[Double]):Double = {    //Sphere Function
       var temp:Double  =0
       for(dim <- 0 to x.length-1 )
       {
@@ -25,5 +25,14 @@ class Particle(dimension:Int,iter:Int) extends Serializable  {
       }
       return temp
     }
+  
+//    def obj_func(x:Array[Double]):Double = {   //Rosenbrock Function
+//      var temp:Double  =0
+//      for(dim <- 0 to x.length-2 )
+//      {
+//        temp =temp + 100*math.pow((x(dim+1)-math.pow(x(dim),2)),2) + math.pow((x(dim)-1),2)
+//      }
+//      return temp
+//    }
   
 }
