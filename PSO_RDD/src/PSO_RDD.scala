@@ -13,6 +13,9 @@ object PSO_RDD {
   var no_of_particles = 1000
   var no_of_iteration_External = 10    //No. of times gbest has to be synced accross nodes
   var no_of_iteration_Internal = 1000             //No. of times pbest has to be evaluated for each particle
+  var c1 = 1
+  var c2 = 2
+  var w = 0.5
   var g_best=Array.fill(dimension)(math.random)
   def main(args:Array[String]): Unit ={
     
@@ -56,9 +59,9 @@ object PSO_RDD {
       g_best = bCast.value            //initialize global best to the broadcasted value
      for(iter <- 0 to no_of_iteration_Internal){        //update the particle
       for(i <- 0 to dimension-1){                        //update velocity
-        var toward_pbest= math.random*(p.p_best(i)-p.p_position(i))
-        var toward_gbest =  2*math.random*(g_best(i)-p.p_position(i))
-        p.p_velocity(i) = 0.5*p.p_velocity(i) + toward_pbest + toward_gbest
+        var toward_pbest= c1*math.random*(p.p_best(i)-p.p_position(i))
+        var toward_gbest =  c2*math.random*(g_best(i)-p.p_position(i))
+        p.p_velocity(i) = w*p.p_velocity(i) + toward_pbest + toward_gbest
       }
       for(i <- 0 to dimension-1){                        //update position
         p.p_position(i) = p.p_position(i) + p.p_velocity(i)
